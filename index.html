@@ -2,9 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyFlow — Exam &amp; Concept Studio</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M9 22L16 8l7 14h-3.2l-1.4-3h-4.8l-1.4 3H9zm5.4-5.5h3.2L16 13l-1.6 3.5z' fill='%23fff'/%3E%3C/svg%3E">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#faf8f5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>StudyFlow — Editorial Exam &amp; Concept Studio</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233730a3'/%3E%3Cpath d='M9 22L16 8l7 14h-3.2l-1.4-3h-4.8l-1.4 3H9zm5.4-5.5h3.2L16 13l-1.6 3.5z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="./app/styles.css">
@@ -17,14 +23,14 @@
         <div class="brand-mark" aria-hidden="true">SF</div>
         <div class="brand-text">
           <span class="brand-title">StudyFlow</span>
-          <span class="brand-sub">Exam &amp; Concept Studio</span>
+          <span class="brand-sub">Academic Exam Studio</span>
         </div>
         <button id="closeSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Close navigation">&times;</button>
       </div>
 
       <section class="subject-panel" aria-label="Subject switcher">
         <div class="subject-panel-head">
-          <label for="subjectSelect" class="field-label">Subject</label>
+          <label for="subjectSelect" class="field-label">Active Subject</label>
           <button id="openNewSubjectBtn" class="btn btn-sm btn-ghost" type="button">+ New Subject</button>
         </div>
         <select id="subjectSelect" class="input-select" aria-label="Select subject"></select>
@@ -58,13 +64,13 @@
           <span id="mistakeBadge" class="nav-badge" hidden>0</span>
         </button>
         <button class="nav-item" type="button" data-tab="materials" role="tab" aria-selected="false">
-          <span class="nav-icon" aria-hidden="true">&#9776;</span>
-          <span class="nav-label">Materials &amp; Data</span>
+          <span class="nav-icon" aria-hidden="true">&#10022;</span>
+          <span class="nav-label">Generate &amp; Data</span>
         </button>
       </nav>
 
       <div class="sidebar-footer">
-        <span class="muted-xs">StudyFlow Study Studio</span>
+        <span class="muted-xs">StudyFlow Academic Studio</span>
       </div>
     </aside>
 
@@ -95,6 +101,30 @@
       </main>
     </div>
   </div>
+
+  <!-- Mobile App Bottom Navigation -->
+  <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="Mobile quick navigation">
+    <button class="mbn-item active" type="button" data-tab="dashboard">
+      <span class="mbn-icon" aria-hidden="true">&#9635;</span>
+      <span class="mbn-label">Home</span>
+    </button>
+    <button class="mbn-item" type="button" data-tab="quiz">
+      <span class="mbn-icon" aria-hidden="true">&#10003;</span>
+      <span class="mbn-label">Quiz</span>
+    </button>
+    <button class="mbn-item" type="button" data-tab="exam">
+      <span class="mbn-icon" aria-hidden="true">&#9201;</span>
+      <span class="mbn-label">Exam</span>
+    </button>
+    <button class="mbn-item" type="button" data-tab="study">
+      <span class="mbn-icon" aria-hidden="true">&sum;</span>
+      <span class="mbn-label">Cards</span>
+    </button>
+    <button class="mbn-item" type="button" data-tab="materials">
+      <span class="mbn-icon" aria-hidden="true">&#10022;</span>
+      <span class="mbn-label">Generate</span>
+    </button>
+  </nav>
 
   <!-- Independent Formula Sheet Slide-over Drawer (never resets Mock Exam timer) -->
   <aside id="formulaDrawer" class="formula-drawer" aria-label="Formula reference drawer" hidden>
@@ -132,7 +162,7 @@
           </div>
           <div class="form-field">
             <label for="newSubjId" class="field-label">Folder Slug</label>
-            <input id="newSubjId" name="id" class="input" type="text" pattern="[a-z0-9_-]{1,48}" placeholder="auto-generated">
+            <input id="newSubjId" name="id" class="input" type="text" pattern="[a-z0-9\-_]{1,48}" placeholder="auto-generated">
           </div>
         </div>
         <div class="form-field">

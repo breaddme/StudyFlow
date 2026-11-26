@@ -1,4 +1,5 @@
 import { mountGraphViewer } from "./graph.js";
+import { generateWithGemini, generateOfflineFromNotes, getSavedApiKey, saveApiKey } from "./generator.js";
 
 const VALID_TABS = new Set(["dashboard", "quiz", "exam", "study", "graph", "mistakes", "materials"]);
 const LETTERS = ["A", "B", "C", "D"];
@@ -22,6 +23,19 @@ const state = {
   formulas: { topicId: "all", search: "" },
   flashcards: { topicId: "all", mode: "all", index: 0, flipped: false, hintOpen: false },
   materials: { addTab: "topic", importMode: "merge" },
+  generator: {
+    mode: "ai",
+    topicTitle: "",
+    questionCount: 15,
+    examStyle: "balanced",
+    language: "auto",
+    notesText: "",
+    files: [],
+    busy: false,
+    preview: null,
+    error: "",
+    saveMode: "merge",
+  },
   graphHandle: null,
 };
 
@@ -677,6 +691,9 @@ function setActiveTab(tab) {
     btn.classList.toggle("active", active);
     btn.setAttribute("aria-selected", String(active));
   });
+  document.querySelectorAll(".mbn-item").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
   closeMobileSidebar();
   renderCurrentView();
 }
@@ -818,17 +835,53 @@ function renderDashboard(main) {
       </div>`
     : `<p class="muted" style="margin:0;">No timed mock exams completed yet.</p>`;
 
+  const ringRadius = 38;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference * (1 - stats.masteryPct / 100);
+  const needsStarterBanner = state.study.questions.length === 0;
+
   main.innerHTML = `
-    <div class="section-head">
+    <section class="hero-banner" aria-label="Course study overview">
       <div>
-        <h1 class="page-title">${escapeHtml(state.study.name || state.activeSubjectId)}</h1>
-        ${state.study.description ? `<p class="page-subtitle">${escapeHtml(state.study.description)}</p>` : ""}
+        <span class="hero-eyebrow">${escapeHtml(state.study.code || state.activeSubjectId.toUpperCase())} &middot; Final Exam Studio</span>
+        <h1 class="hero-title">${escapeHtml(state.study.name || state.activeSubjectId)}</h1>
+        ${state.study.description ? `<p class="hero-desc">${escapeHtml(state.study.description)}</p>` : `<p class="hero-desc">Build quizzes, flashcards, and timed mock exams from your course materials.</p>`}
+        <div class="hero-actions">
+          <button type="button" class="btn btn-primary" data-action="go-exam" ${state.study.questions.length === 0 ? "disabled" : ""}>&#9201; Start Mock Exam</button>
+          <button type="button" class="btn btn-outline" data-action="go-quiz" ${state.study.questions.length === 0 ? "disabled" : ""}>&#10003; Topic Quiz</button>
+          <button type="button" class="btn btn-ghost" data-action="go-materials">&#10022; Auto-Generate Study Pack</button>
+        </div>
       </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline" data-action="go-exam">Timed Mock Exam</button>
-        <button type="button" class="btn btn-primary" data-action="go-quiz">Practice Quiz</button>
+
+      <div class="mastery-ring-box">
+        <div class="mastery-ring" aria-label="${stats.masteryPct}% mastered">
+          <svg viewBox="0 0 96 96">
+            <circle class="ring-track" cx="48" cy="48" r="${ringRadius}"></circle>
+            <circle class="ring-fill ${stats.masteryPct >= 80 ? "good" : ""}" cx="48" cy="48" r="${ringRadius}"
+              stroke-dasharray="${ringCircumference.toFixed(2)}"
+              stroke-dashoffset="${ringOffset.toFixed(2)}"></circle>
+          </svg>
+          <div class="mastery-ring-label">
+            <span class="mastery-ring-pct">${stats.masteryPct}%</span>
+            <span class="mastery-ring-sub">Mastery</span>
+          </div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-weight:700; font-size:13px;">${stats.masteredCount}/${stats.totalQ} Q</div>
+          <div class="muted-xs">${topics.length} topics &middot; ${state.study.formulas.length} formulas</div>
+        </div>
       </div>
-    </div>
+    </section>
+
+    ${needsStarterBanner ? `
+      <div class="card generator-card" style="margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div>
+          <strong style="font-size:16px;">New subject ready! Auto-generate your exam bank in seconds.</strong>
+          <p class="muted-xs" style="margin-top:4px;">Drop PDFs/images with a free Gemini key or paste lecture notes for instant offline quiz &amp; mock exam generation.</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-action="go-materials">Open Auto-Generator &rarr;</button>
+      </div>
+    ` : ""}
 
     <section class="stats-grid" aria-label="Study summary">
       <div class="card stat-card">
@@ -854,12 +907,12 @@ function renderDashboard(main) {
     </section>
 
     <div class="section-head" style="margin-bottom:12px;">
-      <h2 style="margin:0; font-size:18px;">Topics Overview</h2>
+      <h2 class="page-title" style="font-size:24px;">Topics Overview</h2>
     </div>
     <section class="topics-grid">${topicCardsHtml}</section>
 
     <section class="card">
-      <h2 style="margin:0 0 12px; font-size:17px;">Recent Mock Exam History</h2>
+      <h2 class="page-title" style="font-size:22px; margin-bottom:12px;">Recent Mock Exam History</h2>
       ${historyHtml}
     </section>
   `;
@@ -2315,6 +2368,184 @@ function renderAddContentForm() {
   `;
 }
 
+function renderGeneratorSection() {
+  const g = state.generator;
+  const savedKey = getSavedApiKey();
+  const isAi = g.mode === "ai";
+  const fileChips = g.files.map((f, idx) => `
+    <span class="file-chip">
+      ${escapeHtml(f.name)} (${formatBytes(f.size)})
+      <button type="button" data-gen-remove-file="${idx}" aria-label="Remove file" style="border:none;background:transparent;cursor:pointer;padding:0 2px;font-weight:700;">&times;</button>
+    </span>
+  `).join("");
+
+  const previewHtml = g.preview ? `
+    <div class="gen-preview-box" id="genPreviewBox">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
+        <div>
+          <span class="pill pill-primary">${escapeHtml(g.preview.engine)}</span>
+          <strong style="margin-left:6px; font-size:15px;">${escapeHtml(g.preview.topic.title)}</strong>
+        </div>
+        <div class="chip-row">
+          <span class="pill pill-success">${g.preview.questions.length} MCQs</span>
+          <span class="pill">${g.preview.formulas.length} Formulas</span>
+          <span class="pill">${g.preview.flashcards.length} Flashcards</span>
+        </div>
+      </div>
+      ${g.preview.questions[0] ? `
+        <div class="card card-compact" style="background:var(--surface);">
+          <div class="muted-xs" style="margin-bottom:4px;">Sample Generated Question:</div>
+          <div>${renderMathText(g.preview.questions[0].prompt)}</div>
+        </div>
+      ` : ""}
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+        <select id="genSaveModeSel" class="input-select" style="max-width:170px;">
+          <option value="merge" ${g.saveMode === "merge" ? "selected" : ""}>Merge into Subject</option>
+          <option value="replace" ${g.saveMode === "replace" ? "selected" : ""}>Replace Subject Data</option>
+        </select>
+        <button type="button" id="genSaveOnlyBtn" class="btn btn-outline">Save to Subject</button>
+        <button type="button" id="genSaveQuizBtn" class="btn btn-primary">Save &amp; Start Topic Quiz</button>
+        <button type="button" id="genSaveExamBtn" class="btn btn-success">Save &amp; Start Mock Exam</button>
+      </div>
+    </div>
+  ` : "";
+
+  return `
+    <section class="card generator-card" id="autoGeneratorCard">
+      <div class="gen-header">
+        <div>
+          <span class="pill pill-primary" style="margin-bottom:6px;">&#10022; Auto Quiz &amp; Mock Generator</span>
+          <h2 class="page-title" style="font-size:24px;">Generate Study Pack from Notes or PDFs</h2>
+          <p class="muted-xs" style="margin-top:4px;">Automatically create a new topic, MCQs, timed mock exam pool, formulas, and flashcards for ${escapeHtml(state.study.name)}.</p>
+        </div>
+        <div class="subtabs" role="tablist" aria-label="Generator engine">
+          <button type="button" class="subtab-btn ${isAi ? "active" : ""}" data-gen-mode="ai">AI (Gemini)</button>
+          <button type="button" class="subtab-btn ${!isAi ? "active" : ""}" data-gen-mode="offline">Offline Note Parser</button>
+        </div>
+      </div>
+
+      ${isAi ? `
+        <div class="gen-key-bar">
+          <div style="flex:1; min-width:220px;">
+            <label for="genApiKeyInput" class="field-label">Gemini API Key (saved only in your browser)</label>
+            <input id="genApiKeyInput" type="password" class="input" value="${escapeHtml(savedKey)}" placeholder="Paste AIza... key from Google AI Studio">
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-end; padding-top:18px;">
+            <button type="button" id="genSaveKeyBtn" class="btn btn-outline btn-sm">Save Key</button>
+            <a class="btn btn-ghost btn-sm" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get Free Key &nearr;</a>
+          </div>
+        </div>
+      ` : `
+        <div class="gen-key-bar">
+          <span class="muted-xs"><strong>Offline Smart Parser:</strong> No API key needed. Best with Markdown headings (<code># Topic</code>), <code>Term: Definition</code> bullets, <code>Q:/A:</code> pairs, or equations (<code>$...$</code>).</span>
+        </div>
+      `}
+
+      <div class="gen-controls-grid">
+        <div>
+          <label for="genTopicTitle" class="field-label">Topic / Chapter Title (optional)</label>
+          <input id="genTopicTitle" class="input" value="${escapeHtml(g.topicTitle)}" placeholder="Auto-detect from material">
+        </div>
+        <div>
+          <label for="genQuestionCount" class="field-label">Questions to Generate</label>
+          <select id="genQuestionCount" class="input-select">
+            ${[10, 15, 20, 30].map((n) => `<option value="${n}" ${Number(g.questionCount) === n ? "selected" : ""}>${n} Questions</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label for="genStyleSel" class="field-label">Question Focus</label>
+          <select id="genStyleSel" class="input-select">
+            <option value="balanced" ${g.examStyle === "balanced" ? "selected" : ""}>Balanced Mix</option>
+            <option value="conceptual" ${g.examStyle === "conceptual" ? "selected" : ""}>Conceptual Focus</option>
+            <option value="calculation" ${g.examStyle === "calculation" ? "selected" : ""}>Calculation Heavy</option>
+          </select>
+        </div>
+        <div>
+          <label for="genLangSel" class="field-label">Language</label>
+          <select id="genLangSel" class="input-select">
+            <option value="auto" ${g.language === "auto" ? "selected" : ""}>Match Material</option>
+            <option value="english" ${g.language === "english" ? "selected" : ""}>English</option>
+            <option value="thai" ${g.language === "thai" ? "selected" : ""}>Thai</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-bottom:14px;">
+        <div>
+          <label class="field-label">Source Files (${isAi ? ".pdf, images, .md, .txt" : ".md, .txt"})</label>
+          <div id="genDropzone" class="dropzone" tabindex="0" role="button" style="padding:16px;">
+            <strong>Attach PDFs, slides, or notes</strong>
+            <p class="muted-xs" style="margin-top:4px;">${isAi ? "AI reads image-based PDFs directly" : "Text / Markdown files"}</p>
+            <input type="file" id="genFileInput" multiple accept="${isAi ? ".pdf,.md,.txt,.png,.jpg,.jpeg,.webp" : ".md,.txt"}" hidden>
+          </div>
+          ${g.files.length ? `<div class="chip-row" style="margin-top:8px;">${fileChips}</div>` : ""}
+        </div>
+
+        <div>
+          <label for="genNotesTextarea" class="field-label">Or Paste Lecture Notes / Outline</label>
+          <textarea id="genNotesTextarea" class="textarea" rows="5" placeholder="# Chapter 1: Enzyme Kinetics&#10;- Michaelis-Menten Equation: $v = \\frac{V_{max}[S]}{K_m + [S]}$&#10;- Competitive Inhibition: Inhibitor binds active site, increasing apparent $K_m$...">${escapeHtml(g.notesText)}</textarea>
+        </div>
+      </div>
+
+      ${g.error ? `<p class="form-error" style="margin-bottom:10px;">${escapeHtml(g.error)}</p>` : ""}
+
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button type="button" id="genRunBtn" class="btn btn-primary" ${g.busy ? "disabled" : ""}>
+          ${g.busy ? "Generating Study Pack…" : "Generate Study Pack"}
+        </button>
+        ${g.preview ? `<button type="button" id="genDiscardBtn" class="btn btn-ghost btn-sm">Clear Preview</button>` : ""}
+      </div>
+
+      ${previewHtml}
+    </section>
+  `;
+}
+
+async function applyGeneratedPack(launchTarget = "stay") {
+  const pack = state.generator.preview;
+  if (!pack || !state.activeSubjectId) return;
+  const mode = state.generator.saveMode || "merge";
+  const payload = {
+    name: state.study.name,
+    code: state.study.code,
+    description: state.study.description,
+    topics: [pack.topic],
+    formulas: pack.formulas,
+    flashcards: pack.flashcards,
+    questions: pack.questions,
+  };
+  await apiJson(`/api/subjects/${encodeURIComponent(state.activeSubjectId)}/import`, {
+    method: "POST",
+    body: JSON.stringify({ mode, data: payload }),
+  });
+  await refreshSubjectsList();
+  state.study = await apiJson(`/api/subjects/${encodeURIComponent(state.activeSubjectId)}/study`);
+  state.generator.preview = null;
+  state.generator.error = "";
+  updateHeaderAndBadges();
+  populateDrawerTopicOptions();
+  showToast(`Saved ${pack.questions.length} questions, ${pack.formulas.length} formulas, ${pack.flashcards.length} flashcards!`, "success");
+
+  if (launchTarget === "quiz") {
+    state.quiz.filters.topicId = pack.topic.id;
+    state.quiz.session = null;
+    setActiveTab("quiz");
+    startQuizSession("quiz");
+    return;
+  }
+  if (launchTarget === "exam") {
+    const qList = state.study.questions.filter((q) => q.topicId === pack.topic.id);
+    const pool = qList.length ? qList : state.study.questions;
+    const count = Math.min(25, pool.length);
+    const mins = Math.max(10, Math.round(count * 1.5));
+    state.exam.filters.selectedTopics = new Set([pack.topic.id]);
+    setActiveTab("exam");
+    startTimedExam(count, mins, `${state.study.code || state.study.name} — ${pack.topic.title}`);
+    return;
+  }
+  renderCurrentView();
+}
+
 function renderMaterials(main) {
   if (!state.activeSubjectId) {
     main.innerHTML = `<div class="card empty-state">Create or select a subject first.</div>`;
@@ -2327,18 +2558,20 @@ function renderMaterials(main) {
   main.innerHTML = `
     <div class="section-head">
       <div>
-        <h1 class="page-title">Materials &amp; Data</h1>
-        <p class="page-subtitle">Manage PDFs, notes, study packs, concept graphs, and custom items for ${escapeHtml(state.study.name)}</p>
+        <h1 class="page-title">Generate &amp; Data</h1>
+        <p class="page-subtitle">Auto-generate quizzes &amp; mock exams, upload PDFs, import packs, or add items for ${escapeHtml(state.study.name)}</p>
       </div>
       <button type="button" id="matNewSubjBtn" class="btn btn-outline">+ New Subject</button>
     </div>
+
+    ${renderGeneratorSection()}
 
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px; margin-bottom:20px;">
       <section class="card">
         <h2 style="margin:0 0 10px; font-size:17px;">Upload Study Materials</h2>
         <div id="fileDropzone" class="dropzone" tabindex="0" role="button" aria-label="Drop files here or click to upload">
           <strong>Drop files here or click to browse</strong>
-          <p class="muted-xs" style="margin-top:4px;">Supports .pdf, .md, .txt, .json, .png, .jpg, .jpeg, .webp (max 50 MB)</p>
+          <p class="muted-xs" style="margin-top:4px;">Supports .pdf, .md, .txt, .json, .png, .jpg, .jpeg, .webp (max 50 MB local)</p>
           <input type="file" id="materialFileInput" multiple accept=".pdf,.md,.txt,.json,.png,.jpg,.jpeg,.webp" hidden>
         </div>
 
@@ -2403,6 +2636,103 @@ function renderMaterials(main) {
       ${renderAddContentForm()}
     </section>
   `;
+
+  // Auto-Generator listeners
+  main.querySelectorAll("[data-gen-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.generator.mode = btn.dataset.genMode;
+      state.generator.error = "";
+      renderCurrentView();
+    });
+  });
+
+  document.getElementById("genSaveKeyBtn")?.addEventListener("click", () => {
+    const val = document.getElementById("genApiKeyInput")?.value || "";
+    saveApiKey(val);
+    showToast(val.trim() ? "Gemini API key saved in this browser." : "Cleared Gemini API key.", "success");
+  });
+
+  document.getElementById("genTopicTitle")?.addEventListener("input", (e) => { state.generator.topicTitle = e.target.value; });
+  document.getElementById("genQuestionCount")?.addEventListener("change", (e) => { state.generator.questionCount = parseInt(e.target.value, 10) || 15; });
+  document.getElementById("genStyleSel")?.addEventListener("change", (e) => { state.generator.examStyle = e.target.value; });
+  document.getElementById("genLangSel")?.addEventListener("change", (e) => { state.generator.language = e.target.value; });
+  document.getElementById("genNotesTextarea")?.addEventListener("input", (e) => { state.generator.notesText = e.target.value; });
+
+  const genDrop = document.getElementById("genDropzone");
+  const genFileIn = document.getElementById("genFileInput");
+  genDrop?.addEventListener("click", () => genFileIn.click());
+  genDrop?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      genFileIn.click();
+    }
+  });
+  genDrop?.addEventListener("dragover", (e) => { e.preventDefault(); genDrop.classList.add("dragover"); });
+  genDrop?.addEventListener("dragleave", () => genDrop.classList.remove("dragover"));
+  genDrop?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    genDrop.classList.remove("dragover");
+    state.generator.files = [...state.generator.files, ...Array.from(e.dataTransfer?.files || [])];
+    renderCurrentView();
+  });
+  genFileIn?.addEventListener("change", () => {
+    state.generator.files = [...state.generator.files, ...Array.from(genFileIn.files || [])];
+    renderCurrentView();
+  });
+  main.querySelectorAll("[data-gen-remove-file]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.genRemoveFile, 10);
+      state.generator.files.splice(idx, 1);
+      renderCurrentView();
+    });
+  });
+
+  document.getElementById("genDiscardBtn")?.addEventListener("click", () => {
+    state.generator.preview = null;
+    state.generator.error = "";
+    renderCurrentView();
+  });
+
+  document.getElementById("genRunBtn")?.addEventListener("click", async () => {
+    state.generator.busy = true;
+    state.generator.error = "";
+    const keyVal = document.getElementById("genApiKeyInput")?.value || getSavedApiKey();
+    if (state.generator.mode === "ai" && keyVal.trim()) saveApiKey(keyVal);
+    renderCurrentView();
+    try {
+      const pack = state.generator.mode === "ai"
+        ? await generateWithGemini({
+            apiKey: keyVal,
+            files: state.generator.files,
+            notesText: state.generator.notesText,
+            subjectName: state.study.name || state.activeSubjectId,
+            topicTitle: state.generator.topicTitle,
+            questionCount: state.generator.questionCount,
+            examStyle: state.generator.examStyle,
+            language: state.generator.language,
+          })
+        : await generateOfflineFromNotes({
+            files: state.generator.files,
+            notesText: state.generator.notesText,
+            subjectName: state.study.name || state.activeSubjectId,
+            topicTitle: state.generator.topicTitle,
+            questionCount: state.generator.questionCount,
+          });
+      state.generator.preview = pack;
+      showToast(`Generated ${pack.questions.length} MCQs and ${pack.flashcards.length} flashcards!`, "success");
+    } catch (err) {
+      state.generator.error = err.message;
+      showToast(err.message, "error");
+    } finally {
+      state.generator.busy = false;
+      renderCurrentView();
+    }
+  });
+
+  document.getElementById("genSaveModeSel")?.addEventListener("change", (e) => { state.generator.saveMode = e.target.value; });
+  document.getElementById("genSaveOnlyBtn")?.addEventListener("click", () => applyGeneratedPack("stay"));
+  document.getElementById("genSaveQuizBtn")?.addEventListener("click", () => applyGeneratedPack("quiz"));
+  document.getElementById("genSaveExamBtn")?.addEventListener("click", () => applyGeneratedPack("exam"));
 
   document.getElementById("matNewSubjBtn").addEventListener("click", openNewSubjectDialog);
 
@@ -2595,7 +2925,7 @@ async function boot() {
   document.getElementById("closeSidebarBtn").addEventListener("click", closeMobileSidebar);
   document.getElementById("sidebarBackdrop").addEventListener("click", closeMobileSidebar);
 
-  document.querySelectorAll(".nav-item[data-tab]").forEach((btn) => {
+  document.querySelectorAll(".nav-item[data-tab], .mbn-item[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
   });
 
@@ -2642,10 +2972,13 @@ async function boot() {
         body: JSON.stringify(payload),
       });
       dlg.close();
+      state.generator.preview = null;
+      state.generator.error = "";
+      state.generator.topicTitle = "";
       await refreshSubjectsList();
       await selectSubject(created.id);
       setActiveTab("materials");
-      showToast(`Created subject '${created.name}'.`, "success");
+      showToast(`Created subject '${created.name}'. Paste notes or drop PDFs to auto-generate quizzes!`, "success");
     } catch (err) {
       errEl.textContent = err.message;
       errEl.hidden = false;
