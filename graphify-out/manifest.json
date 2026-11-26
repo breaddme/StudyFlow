@@ -1,0 +1,56 @@
+{
+  "physic/SCPY130 EP10-part1.pdf": {
+    "mtime": 1795694548.2774417,
+    "seen": 1795696887.7696273,
+    "ast_hash": "a9178bf806a65f613a0f8bb9f601fb10",
+    "semantic_hash": "a9178bf806a65f613a0f8bb9f601fb10"
+  },
+  "physic/SCPY130 EP10-part2.pdf": {
+    "mtime": 1795694551.9144766,
+    "seen": 1795696887.7696428,
+    "ast_hash": "a998151a1478361479aa966c58d3c1d0",
+    "semantic_hash": "a998151a1478361479aa966c58d3c1d0"
+  },
+  "physic/SCPY130 EP7-part1.pdf": {
+    "mtime": 1795694514.8498003,
+    "seen": 1795696887.7696466,
+    "ast_hash": "52796f1fadca2fa771c64e68837b114b",
+    "semantic_hash": "52796f1fadca2fa771c64e68837b114b"
+  },
+  "physic/SCPY130 EP7-part2.pdf": {
+    "mtime": 1795694520.7280393,
+    "seen": 1795696887.7696486,
+    "ast_hash": "ef6a0666e55d381380f8708d01b2c16a",
+    "semantic_hash": "ef6a0666e55d381380f8708d01b2c16a"
+  },
+  "physic/SCPY130 EP8-part1.pdf": {
+    "mtime": 1795694526.7361965,
+    "seen": 1795696887.7696505,
+    "ast_hash": "30d2086f05e629af63e8443a79b43067",
+    "semantic_hash": "30d2086f05e629af63e8443a79b43067"
+  },
+  "physic/SCPY130 EP8-part2.pdf": {
+    "mtime": 1795694530.535594,
+    "seen": 1795696887.7696517,
+    "ast_hash": "5b79ea907fe0cd651ad3412406f7a117",
+    "semantic_hash": "5b79ea907fe0cd651ad3412406f7a117"
+  },
+  "physic/SCPY130 EP8-part3.pdf": {
+    "mtime": 1795694534.8060036,
+    "seen": 1795696887.7696533,
+    "ast_hash": "dee0437c557e491792e53d09ccc81a8c",
+    "semantic_hash": "dee0437c557e491792e53d09ccc81a8c"
+  },
+  "physic/SCPY130 EP9-part1.pdf": {
+    "mtime": 1795694539.4967122,
+    "seen": 1795696887.7696548,
+    "ast_hash": "cdd21d76ab6d2718c78089abe96b7c08",
+    "semantic_hash": "cdd21d76ab6d2718c78089abe96b7c08"
+  },
+  "physic/SCPY130 EP9-part2.pdf": {
+    "mtime": 1795694542.362526,
+    "seen": 1795696887.7696564,
+    "ast_hash": "2da5731bda968eff8b8a6cf86fb451ec",
+    "semantic_hash": "2da5731bda968eff8b8a6cf86fb451ec"
+  }
+}

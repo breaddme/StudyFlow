@@ -1,0 +1,73 @@
+{
+  "subjects": [
+    {
+      "id": "physic",
+      "name": "Fundamental Physics 1",
+      "code": "SCPY130",
+      "description": "Mechanics and Thermodynamics (EP7 Oscillations, EP8 Waves, EP9 Fluid Mechanics, EP10 Thermodynamics)",
+      "counts": {
+        "topics": 4,
+        "questions": 74,
+        "formulas": 56,
+        "flashcards": 55,
+        "graphNodes": 101
+      },
+      "files": [
+        {
+          "name": "SCPY130 EP10-part1.pdf",
+          "size": 10280288,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP10-part1.pdf"
+        },
+        {
+          "name": "SCPY130 EP10-part2.pdf",
+          "size": 4784839,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP10-part2.pdf"
+        },
+        {
+          "name": "SCPY130 EP7-part1.pdf",
+          "size": 4934008,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP7-part1.pdf"
+        },
+        {
+          "name": "SCPY130 EP7-part2.pdf",
+          "size": 5460565,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP7-part2.pdf"
+        },
+        {
+          "name": "SCPY130 EP8-part1.pdf",
+          "size": 5288546,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP8-part1.pdf"
+        },
+        {
+          "name": "SCPY130 EP8-part2.pdf",
+          "size": 2679981,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP8-part2.pdf"
+        },
+        {
+          "name": "SCPY130 EP8-part3.pdf",
+          "size": 7332816,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP8-part3.pdf"
+        },
+        {
+          "name": "SCPY130 EP9-part1.pdf",
+          "size": 9515425,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP9-part1.pdf"
+        },
+        {
+          "name": "SCPY130 EP9-part2.pdf",
+          "size": 6252332,
+          "ext": ".pdf",
+          "url": "./physic/SCPY130%20EP9-part2.pdf"
+        }
+      ]
+    }
+  ]
+}

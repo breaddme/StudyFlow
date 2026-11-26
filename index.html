@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyFlow — Exam &amp; Concept Studio</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M9 22L16 8l7 14h-3.2l-1.4-3h-4.8l-1.4 3H9zm5.4-5.5h3.2L16 13l-1.6 3.5z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="./app/styles.css">
+  <script type="module" src="./app/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">SF</div>
+        <div class="brand-text">
+          <span class="brand-title">StudyFlow</span>
+          <span class="brand-sub">Exam &amp; Concept Studio</span>
+        </div>
+        <button id="closeSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Close navigation">&times;</button>
+      </div>
+
+      <section class="subject-panel" aria-label="Subject switcher">
+        <div class="subject-panel-head">
+          <label for="subjectSelect" class="field-label">Subject</label>
+          <button id="openNewSubjectBtn" class="btn btn-sm btn-ghost" type="button">+ New Subject</button>
+        </div>
+        <select id="subjectSelect" class="input-select" aria-label="Select subject"></select>
+        <div id="subjectMiniMeta" class="subject-mini-meta">Loading subjects…</div>
+      </section>
+
+      <nav class="nav-list" role="tablist" aria-label="Study views">
+        <button class="nav-item active" type="button" data-tab="dashboard" role="tab" aria-selected="true">
+          <span class="nav-icon" aria-hidden="true">&#9635;</span>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" type="button" data-tab="quiz" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">&#10003;</span>
+          <span class="nav-label">Topic Quiz</span>
+        </button>
+        <button class="nav-item" type="button" data-tab="exam" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">&#9201;</span>
+          <span class="nav-label">Timed Mock Exam</span>
+        </button>
+        <button class="nav-item" type="button" data-tab="study" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">&sum;</span>
+          <span class="nav-label">Formulas &amp; Flashcards</span>
+        </button>
+        <button class="nav-item" type="button" data-tab="graph" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">&#9673;</span>
+          <span class="nav-label">Concept Graph</span>
+        </button>
+        <button class="nav-item" type="button" data-tab="mistakes" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">&#9873;</span>
+          <span class="nav-label">Mistake Bank</span>
+          <span id="mistakeBadge" class="nav-badge" hidden>0</span>
+        </button>
+        <button class="nav-item" type="button" data-tab="materials" role="tab" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">&#9776;</span>
+          <span class="nav-label">Materials &amp; Data</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="muted-xs">StudyFlow Study Studio</span>
+      </div>
+    </aside>
+
+    <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="openSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Open navigation">&#9776;</button>
+          <div id="activeSubjectBadge" class="subject-badge">
+            <span class="subject-code-pill" id="topSubjectCode">—</span>
+            <span class="subject-name-text" id="topSubjectName">Loading…</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div id="topMasteryPill" class="mastery-pill" title="Overall question mastery">
+            Mastery: <strong>0%</strong>
+          </div>
+          <button id="themeToggleBtn" class="btn btn-sm btn-outline" type="button" aria-label="Toggle light or dark theme">
+            <span id="themeIcon" aria-hidden="true">&#9790;</span>
+            <span id="themeLabel">Dark</span>
+          </button>
+        </div>
+      </header>
+
+      <main id="mainContent" class="main-content" tabindex="-1">
+        <div class="card empty-state">Loading study workspace…</div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Independent Formula Sheet Slide-over Drawer (never resets Mock Exam timer) -->
+  <aside id="formulaDrawer" class="formula-drawer" aria-label="Formula reference drawer" hidden>
+    <div class="drawer-head">
+      <div>
+        <h2 class="drawer-title">Formula Reference</h2>
+        <p class="muted-xs">Quick reference during timed mock exams</p>
+      </div>
+      <button id="closeDrawerBtn" class="icon-btn" type="button" aria-label="Close formula drawer">&times;</button>
+    </div>
+    <div class="drawer-controls">
+      <input id="drawerSearchInput" class="input" type="search" placeholder="Search formulas, symbols, topics…">
+      <select id="drawerTopicSelect" class="input-select"></select>
+    </div>
+    <div id="drawerBody" class="drawer-body"></div>
+  </aside>
+  <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
+
+  <!-- Native Dialog for New Subject -->
+  <dialog id="newSubjectDialog" class="modal-dialog" aria-labelledby="newSubjectHeading">
+    <form id="newSubjectForm" class="modal-form" method="dialog">
+      <div class="modal-head">
+        <h2 id="newSubjectHeading">Create New Subject</h2>
+        <button id="cancelNewSubjectX" class="icon-btn" type="button" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="newSubjName" class="field-label">Subject Name <span class="req">*</span></label>
+          <input id="newSubjName" name="name" class="input" type="text" required placeholder="e.g. Organic Chemistry 1">
+        </div>
+        <div class="form-row-2">
+          <div class="form-field">
+            <label for="newSubjCode" class="field-label">Course Code</label>
+            <input id="newSubjCode" name="code" class="input" type="text" placeholder="e.g. CHEM201">
+          </div>
+          <div class="form-field">
+            <label for="newSubjId" class="field-label">Folder Slug</label>
+            <input id="newSubjId" name="id" class="input" type="text" pattern="[a-z0-9_-]{1,48}" placeholder="auto-generated">
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="newSubjDesc" class="field-label">Description</label>
+          <textarea id="newSubjDesc" name="description" class="input textarea" rows="2" placeholder="Exam coverage, textbook, or notes…"></textarea>
+        </div>
+        <p id="newSubjError" class="form-error" hidden></p>
+      </div>
+      <div class="modal-actions">
+        <button id="cancelNewSubjectBtn" class="btn btn-outline" type="button">Cancel</button>
+        <button class="btn btn-primary" type="submit">Create Subject</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
