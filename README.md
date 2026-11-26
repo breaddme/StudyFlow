@@ -1,6 +1,6 @@
-# StudyFlow — Local Exam Prep & Concept Studio
+# StudyFlow
 
-Zero-dependency local study workspace built with Python 3.11 stdlib (`ThreadingHTTPServer`) and vanilla ES modules + Canvas + KaTeX.
+Zero-dependency study workspace built with Python 3.11 stdlib (`ThreadingHTTPServer`) and vanilla ES modules + Canvas + KaTeX.
 
 ## Running Locally or on GitHub Pages
 
@@ -23,9 +23,9 @@ Zero-dependency local study workspace built with Python 3.11 stdlib (`ThreadingH
 
 ### GitHub Pages (24/7 phone & laptop access)
 
-1. Push this repo to GitHub (`main` branch).
+1. Push this repo (`https://github.com/breaddme/StudyFlow`) to GitHub (`main` branch).
 2. In your GitHub repo, open **Settings → Pages → Build and deployment** and set **Source: Deploy from a branch**, **Branch: `main` / `/ (root)`**.
-3. Open `https://<your-username>.github.io/<repo-name>/` on your phone or computer — the app automatically detects static hosting, reads `subjects.json` + `<subject>/study.json` + `<subject>/graph.json`, and saves your progress, Mistake Bank, flashcards, custom subjects, and imported JSON study packs in `localStorage`.
+3. Open **https://breaddme.github.io/StudyFlow/** on your phone or computer — the app automatically detects static hosting, reads `subjects.json` + `<subject>/study.json` + `<subject>/graph.json`, and saves your progress, Mistake Bank, flashcards, custom subjects, and imported JSON study packs in `localStorage`.
 
 ## Features
 
